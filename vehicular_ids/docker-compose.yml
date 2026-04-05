@@ -1,0 +1,15 @@
+services:
+  vehicular-ids:
+    build: .
+    container_name: vehicular-ids
+    ports:
+      - "8501:8501"
+    environment:
+      VEHICULAR_IDS_AUTH_ENABLED: "true"
+      VEHICULAR_IDS_USER: "admin"
+      VEHICULAR_IDS_PASSWORD: "vehicular-ids-demo"
+    volumes:
+      - ./storage:/app/storage
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    restart: unless-stopped

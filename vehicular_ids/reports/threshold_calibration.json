@@ -1,0 +1,28 @@
+{
+  "dataset_path": "C:\\Users\\KARTIK~1\\AppData\\Local\\Temp\\tmpa7ybr4yr\\sample.csv",
+  "baseline_rows": 1000,
+  "calibration_quantile": 0.995,
+  "recommended_thresholds": {
+    "flood_threshold": 53,
+    "replay_min_time_diff_seconds": 0.006449,
+    "replay_repeat_threshold": 3,
+    "sequence_repeat_threshold": 3,
+    "max_valid_speed": 179.61,
+    "anomaly_score_threshold": 0.9978,
+    "whitelist": [
+      "0x100",
+      "0x101",
+      "0x102",
+      "0x200",
+      "0x201",
+      "0x300",
+      "0x301"
+    ]
+  },
+  "baseline_summary": {
+    "max_messages_per_second": 44,
+    "median_time_diff": 0.112825,
+    "max_sequence_repeat_count": 3,
+    "max_decoded_speed": 159.8
+  }
+}
