@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,32 @@ from utils.config import SAMPLE_DATASET_PATH
 
 
 LOGGER = setup_logging()
+
+
+def get_live_can_unavailable_reason(
+    channel: str,
+    bustype: str,
+    platform_name: str | None = None,
+) -> str | None:
+    """Return a user-facing reason when the selected live CAN backend is unsupported."""
+    current_platform = (platform_name or sys.platform).lower()
+    normalized_bustype = str(bustype or "").strip().lower()
+    normalized_channel = str(channel or "").strip().lower()
+
+    if current_platform.startswith("win") and normalized_bustype == "socketcan":
+        if normalized_channel.startswith("vcan"):
+            return (
+                "Live CAN read is disabled because SocketCAN and vcan interfaces are "
+                "Linux-only. On Windows, use Synthetic Replay Stream or configure a "
+                "Windows-supported python-can backend such as pcan, vector, ixxat, or slcan."
+            )
+        return (
+            "Live CAN read is disabled because the selected SocketCAN backend is "
+            "Linux-only. On Windows, use Synthetic Replay Stream or configure a "
+            "Windows-supported python-can backend such as pcan, vector, ixxat, or slcan."
+        )
+
+    return None
 
 
 @dataclass

@@ -23,7 +23,11 @@ from src.preprocessing import normalize_message_id
 from src.rule_engine import RuleEngine
 from src.simulator import save_current_demo_dataset
 from src.storage import IDSStorage
-from src.streaming import CsvReplayStreamReader, PythonCANStreamReader
+from src.streaming import (
+    CsvReplayStreamReader,
+    PythonCANStreamReader,
+    get_live_can_unavailable_reason,
+)
 from utils.config import (
     DEMO_DATASET_PATH,
     DEFAULT_DB_PATH,
@@ -440,10 +444,24 @@ def render_stream_tab(rule_engine: RuleEngine, persist_results: bool) -> None:
         st.markdown("**python-can Live Bus Read**")
         channel = st.text_input("CAN channel", value="vcan0")
         bustype = st.text_input("Bus type", value="socketcan")
+        unavailable_reason = get_live_can_unavailable_reason(channel=channel, bustype=bustype)
         reader = PythonCANStreamReader(channel=channel, bustype=bustype)
-        if not reader.is_available:
+        live_read_disabled = False
+
+        if unavailable_reason:
+            st.info(unavailable_reason)
+            live_read_disabled = True
+        elif not reader.is_available:
             st.warning("python-can is not installed in this environment; replay mode remains available.")
-        elif st.button("Read live CAN batch", use_container_width=True):
+            live_read_disabled = True
+
+        read_live_batch = st.button(
+            "Read live CAN batch",
+            use_container_width=True,
+            disabled=live_read_disabled,
+        )
+
+        if read_live_batch and not live_read_disabled:
             try:
                 live_batch = reader.read_batch(max_messages=200, timeout_seconds=0.03)
                 if live_batch.empty:

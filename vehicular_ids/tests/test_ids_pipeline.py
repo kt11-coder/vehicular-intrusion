@@ -29,7 +29,7 @@ from src.public_dataset_adapters import (
 from src.rule_engine import RuleEngine
 from src.simulator import CANDatasetSimulator, save_current_demo_dataset
 from src.storage import IDSStorage
-from src.streaming import CsvReplayStreamReader
+from src.streaming import CsvReplayStreamReader, get_live_can_unavailable_reason
 from utils.config import DEFAULT_DBC_PATH
 
 
@@ -221,6 +221,17 @@ class TestAuthAndStreaming(unittest.TestCase):
                 batch_one.iloc[0]["timestamp"],
                 batch_two.iloc[0]["timestamp"],
             )
+
+    def test_windows_socketcan_reason_is_user_friendly(self) -> None:
+        reason = get_live_can_unavailable_reason(
+            channel="vcan0",
+            bustype="socketcan",
+            platform_name="win32",
+        )
+
+        self.assertIsNotNone(reason)
+        self.assertIn("Linux-only", reason)
+        self.assertIn("Windows-supported", reason)
 
 
 class TestPublicDatasetAdapters(unittest.TestCase):
