@@ -27,7 +27,7 @@ from src.public_dataset_adapters import (
     load_road_candump_log,
 )
 from src.rule_engine import RuleEngine
-from src.simulator import CANDatasetSimulator
+from src.simulator import CANDatasetSimulator, save_current_demo_dataset
 from src.storage import IDSStorage
 from src.streaming import CsvReplayStreamReader
 from utils.config import DEFAULT_DBC_PATH
@@ -67,6 +67,20 @@ class TestPreprocessing(unittest.TestCase):
 
 
 class TestRulePipeline(unittest.TestCase):
+    def test_demo_dataset_helper_can_anchor_to_current_demo_start_time(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset_path = Path(temp_dir) / "demo_sample.csv"
+            save_current_demo_dataset(
+                dataset_path=dataset_path,
+                start_time="2026-05-06 10:15:00",
+            )
+
+            frame = pd.read_csv(dataset_path)
+
+            self.assertTrue(dataset_path.exists())
+            self.assertTrue(frame["timestamp"].iloc[0].startswith("2026-05-06"))
+            self.assertIn("ground_truth", frame.columns)
+
     def test_pipeline_detects_all_expected_attack_types(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             dataset_path = Path(temp_dir) / "sample_can.csv"

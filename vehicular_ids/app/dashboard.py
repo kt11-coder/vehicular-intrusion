@@ -21,17 +21,17 @@ from src.evaluation import evaluate_detection_performance
 from src.pipeline import PipelineResult, run_ids_pipeline
 from src.preprocessing import normalize_message_id
 from src.rule_engine import RuleEngine
-from src.simulator import CANDatasetSimulator, ensure_sample_dataset
+from src.simulator import save_current_demo_dataset
 from src.storage import IDSStorage
 from src.streaming import CsvReplayStreamReader, PythonCANStreamReader
 from utils.config import (
+    DEMO_DATASET_PATH,
     DEFAULT_DB_PATH,
     FLOOD_MESSAGES_PER_SECOND_THRESHOLD,
     MAX_UPLOAD_BYTES,
     MAX_VALID_SPEED,
     REPLAY_MIN_TIME_DIFF_SECONDS,
     REPLAY_REPEAT_THRESHOLD,
-    SAMPLE_DATASET_PATH,
     SEQUENCE_REPEAT_THRESHOLD,
     WHITELISTED_MESSAGE_IDS,
 )
@@ -106,14 +106,26 @@ def get_storage() -> IDSStorage:
     return IDSStorage(DEFAULT_DB_PATH)
 
 
+def get_demo_dataset_path() -> Path:
+    demo_path = Path(st.session_state.get("demo_dataset_path", DEMO_DATASET_PATH))
+    if "demo_dataset_path" not in st.session_state or not demo_path.exists():
+        demo_path = save_current_demo_dataset(DEMO_DATASET_PATH)
+        st.session_state["demo_dataset_path"] = str(demo_path)
+    return demo_path
+
+
+def rebuild_replay_reader() -> None:
+    demo_dataset_path = get_demo_dataset_path()
+    st.session_state["replay_reader"] = CsvReplayStreamReader(
+        dataset_path=demo_dataset_path,
+        batch_size=120,
+        replay_delay_seconds=0.0,
+    )
+
+
 def initialize_stream_state() -> None:
     if "replay_reader" not in st.session_state:
-        ensure_sample_dataset(SAMPLE_DATASET_PATH)
-        st.session_state["replay_reader"] = CsvReplayStreamReader(
-            dataset_path=SAMPLE_DATASET_PATH,
-            batch_size=120,
-            replay_delay_seconds=0.0,
-        )
+        rebuild_replay_reader()
     if "stream_frame" not in st.session_state:
         st.session_state["stream_frame"] = pd.DataFrame()
 
@@ -125,9 +137,9 @@ def run_current_pipeline(
 ) -> PipelineResult:
     storage = get_storage()
     if uploaded_file is None:
-        ensure_sample_dataset(SAMPLE_DATASET_PATH)
+        demo_dataset_path = get_demo_dataset_path()
         return run_ids_pipeline(
-            dataset_path=SAMPLE_DATASET_PATH,
+            dataset_path=demo_dataset_path,
             rule_engine=rule_engine,
             storage=storage,
             persist_results=persist_results,
@@ -169,7 +181,7 @@ def render_sidebar(is_public_demo: bool) -> tuple[Any, RuleEngine, int, bool, bo
             else None
         ),
     )
-    regenerate_sample = st.sidebar.button("Regenerate synthetic sample")
+    regenerate_sample = st.sidebar.button("Refresh current-time demo sample")
     reset_session = st.sidebar.button("Reset demo session")
 
     if is_public_demo:
@@ -568,9 +580,11 @@ def main() -> None:
     ) = render_sidebar(is_public_demo)
 
     if regenerate_sample:
-        simulator = CANDatasetSimulator()
-        simulator.save_dataset(SAMPLE_DATASET_PATH)
-        st.sidebar.success("Synthetic dataset regenerated.")
+        save_current_demo_dataset(DEMO_DATASET_PATH)
+        st.session_state["demo_dataset_path"] = str(DEMO_DATASET_PATH)
+        rebuild_replay_reader()
+        reset_demo_session()
+        st.sidebar.success("Current-time demo dataset regenerated.")
 
     if reset_session:
         reset_demo_session()
@@ -583,7 +597,7 @@ def main() -> None:
         st.stop()
 
     if uploaded_file is None:
-        st.info(f"Using sample dataset: {SAMPLE_DATASET_PATH.name}")
+        st.info(f"Using current-time demo dataset: {get_demo_dataset_path().name}")
     else:
         st.success(f"Using uploaded dataset: {uploaded_file.name}")
 

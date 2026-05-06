@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from utils.config import (
+    DEMO_DATASET_PATH,
     NORMAL_SPEED_RANGES,
     OPTIONAL_LABEL_COLUMN,
     REQUIRED_COLUMNS,
@@ -291,6 +292,16 @@ def ensure_sample_dataset(dataset_path: Path | str = SAMPLE_DATASET_PATH) -> Pat
 
     simulator = CANDatasetSimulator()
     return simulator.save_dataset(output_path)
+
+
+def save_current_demo_dataset(
+    dataset_path: Path | str = DEMO_DATASET_PATH,
+    start_time: str | pd.Timestamp | None = None,
+) -> Path:
+    """Generate a demo dataset anchored to the current local time."""
+    anchor_time = pd.Timestamp.now().floor("s") if start_time is None else pd.Timestamp(start_time)
+    simulator = CANDatasetSimulator(start_time=str(anchor_time))
+    return simulator.save_dataset(dataset_path)
 
 
 if __name__ == "__main__":
